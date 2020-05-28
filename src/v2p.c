@@ -17,6 +17,8 @@
 #define dprintf    no_printf
 #endif
 
+static int pagesize;
+
 void usage(int argc, char *argv[])
 {
 	fprintf(stderr, "usage: \n"
@@ -69,7 +71,6 @@ ssize_t readn(int fd, void *buf, size_t count)
  */
 uint64_t virt_to_phys(int fd, int pid, uint64_t virtaddr)
 {
-	int pagesize;
 	uint64_t tbloff, tblen, pageaddr, physaddr;
 	off_t offset;
 	ssize_t nr;
@@ -81,8 +82,6 @@ uint64_t virt_to_phys(int fd, int pid, uint64_t virtaddr)
 	uint64_t tbl_swap_offset;
 	uint64_t tbl_swap_type;
 
-	//1PAGE = typically 4KB, 1entry = 8bytes
-	pagesize = (int)sysconf(_SC_PAGESIZE);
 	//see: linux/Documentation/vm/pagemap.txt
 	tbloff = virtaddr / pagesize * sizeof(uint64_t);
 	dprintf("pagesize:%d, virt:0x%08llx, tblent:0x%08llx\n",
@@ -90,7 +89,7 @@ uint64_t virt_to_phys(int fd, int pid, uint64_t virtaddr)
 
 	offset = lseek(fd, tbloff, SEEK_SET);
 	if (offset == (off_t)-1) {
-		perror("lseek");
+		perror("lseek returns -1");
 		return -1;
 	}
 	if (offset != tbloff) {
@@ -160,13 +159,12 @@ int main(int argc, char *argv[])
 {
 	const char *arg_pid, *arg_addr, *arg_area;
 	char procname[1024] = "";
-	int pid, fd = -1, pagesize;
+	int pid, fd = -1;
 	uint64_t virtaddr, areasize, physaddr, v;
-	int result = -1;
 
 	if (argc < 4) {
 		usage(argc, argv);
-		return -1;
+		return EXIT_FAILURE;
 	}
 	arg_pid = argv[1];
 	arg_addr = argv[2];
@@ -182,8 +180,8 @@ int main(int argc, char *argv[])
 		"/proc/%d/pagemap", pid);
 	fd = open(procname, O_RDONLY);
 	if (fd == -1) {
-		perror("open");
-		goto err_out;
+		perror("cannot open /proc/pid/pagemap");
+		return EXIT_FAILURE;
 	}
 
 	pagesize = (int)sysconf(_SC_PAGESIZE);
@@ -205,14 +203,8 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	result = 0;
+  close(fd);
 
-err_out:
-	if (fd != -1) {
-		close(fd);
-		fd = -1;
-	}
-
-	return result;
+	return EXIT_SUCCESS;
 }
 

@@ -2,14 +2,14 @@
 A tool of translating virtual address of user space to physical address.
 
 #### Requires
-* Linux
+* Linux 2.6.25 or later.
 * autotools (autoconf, automake)
 
 
 ## How to use
 Get source code and configure.
 
-    $ git clone https://github.com/katsuster/virt2phys
+    $ git clone https://github.com/fujitatomoya/virt2phys
     $ cd virt2phys
     $ autoreconf --force --install
     $ ./configure
